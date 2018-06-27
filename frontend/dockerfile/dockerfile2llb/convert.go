@@ -85,6 +85,9 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		if err != nil {
 			return nil, nil, err
 		}
+		if name == "" {
+			return nil, nil, errors.New("BaseName should not be blank")
+		}
 		st.BaseName = name
 
 		ds := &dispatchState{
@@ -330,7 +333,15 @@ type dispatchOpt struct {
 func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 	if ex, ok := cmd.Command.(instructions.SupportsSingleWordExpansion); ok {
 		err := ex.Expand(func(word string) (string, error) {
-			return opt.shlex.ProcessWord(word, toEnvList(d.buildArgs, d.image.Config.Env))
+			value, err := opt.shlex.ProcessWord(word, toEnvList(d.buildArgs, d.image.Config.Env))
+
+			if err != nil {
+				return value, err
+			}
+			if value == "" {
+				return "", fmt.Errorf("Empty string is passed to %s : %s", strings.ToUpper(cmd.Command.Name()), word)
+			}
+			return value, err
 		})
 		if err != nil {
 			return err
