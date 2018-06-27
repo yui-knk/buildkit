@@ -21,6 +21,7 @@ var (
 
 const (
 	commandLabel = "LABEL"
+	commandEnv   = "ENV"
 )
 
 // ignore the current argument. This will still leave a command parsed, but
@@ -193,7 +194,7 @@ func appendKeyValueNode(node, rootNode, prevNode *Node) (*Node, *Node) {
 }
 
 func parseEnv(rest string, d *Directive) (*Node, map[string]bool, error) {
-	node, err := parseNameVal(rest, "ENV", d)
+	node, err := parseNameVal(rest, commandEnv, d)
 	return node, nil, err
 }
 
