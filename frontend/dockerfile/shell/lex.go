@@ -123,7 +123,7 @@ func (sw *shellWord) processStopOn(stopChar rune) (string, []string, error) {
 	var charFuncMapping = map[rune]func() (string, error){
 		'\'': sw.processSingleQuote,
 		'"':  sw.processDoubleQuote,
-		'$':  sw.processDollar,
+		'$':  sw.processDollarStrict,
 	}
 
 	for sw.scanner.Peek() != scanner.EOF {
@@ -223,7 +223,7 @@ func (sw *shellWord) processDoubleQuote() (string, error) {
 			sw.scanner.Next()
 			return result.String(), nil
 		case '$':
-			value, err := sw.processDollar()
+			value, err := sw.processDollarStrict()
 			if err != nil {
 				return "", err
 			}
@@ -246,6 +246,20 @@ func (sw *shellWord) processDoubleQuote() (string, error) {
 			result.WriteRune(ch)
 		}
 	}
+}
+
+func (sw *shellWord) processDollarStrict() (string, error) {
+	value, err := sw.processDollar()
+
+	if err != nil {
+		return value, err
+	}
+
+	if value == "" {
+		return "", errors.New("Set ENV")
+	}
+
+	return value, err
 }
 
 func (sw *shellWord) processDollar() (string, error) {
