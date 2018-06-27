@@ -15,6 +15,7 @@ RUN apk add --no-cache g++ linux-headers
 RUN apk add --no-cache git libseccomp-dev make
 
 FROM gobuild-base AS buildkit-base
+ARG GOOS=linux
 WORKDIR /go/src/github.com/moby/buildkit
 COPY . .
 RUN mkdir .tmp; \
@@ -23,12 +24,15 @@ RUN mkdir .tmp; \
 
 FROM buildkit-base AS buildctl
 ENV CGO_ENABLED=0
-ARG GOOS=linux
 RUN go build -ldflags "$(cat .tmp/ldflags) -d" -o /usr/bin/buildctl ./cmd/buildctl
 
 FROM buildkit-base AS buildkitd
 ENV CGO_ENABLED=1
 RUN go build -installsuffix netgo -ldflags "$(cat .tmp/ldflags) -w -extldflags -static" -tags 'seccomp netgo cgo static_build' -o /usr/bin/buildkitd ./cmd/buildkitd
+
+FROM buildkit-base AS dumper
+ENV CGO_ENABLED=0
+RUN go build -o /usr/bin/dumper ./frontend/dockerfile/parser/dumper
 
 # test dependencies begin here
 FROM gobuild-base AS runc

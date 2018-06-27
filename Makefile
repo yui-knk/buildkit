@@ -5,6 +5,8 @@ DESTDIR=/usr/local
 binaries: $(BINARIES)
 binaries-all: $(BINARIES) $(BINARIES_EXTRA)
 
+dumper: bin/dumper
+
 bin/buildctl-darwin: FORCE
 	mkdir -p bin
 	docker build --build-arg GOOS=darwin -t buildkit:buildctl-darwin --target buildctl -f ./hack/dockerfiles/test.Dockerfile --force-rm .
