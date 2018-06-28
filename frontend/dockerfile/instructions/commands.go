@@ -367,6 +367,14 @@ func (c *ArgCommand) Expand(expander SingleWordExpander) error {
 	return nil
 }
 
+func (c *ArgCommand) GetValue() string {
+	v := ""
+	if c.Value != nil {
+		v = *c.Value
+	}
+	return v
+}
+
 // ShellCommand : SHELL powershell -command
 //
 // Set the non-default shell to use.

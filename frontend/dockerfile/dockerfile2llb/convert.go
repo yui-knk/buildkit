@@ -510,7 +510,7 @@ func dispatchRun(d *dispatchState, c *instructions.RunCommand, proxy *llb.ProxyE
 	}
 	opt := []llb.RunOption{llb.Args(args)}
 	for _, arg := range d.buildArgs {
-		opt = append(opt, llb.AddEnv(arg.Key, getArgValue(arg)))
+		opt = append(opt, llb.AddEnv(arg.Key, arg.GetValue()))
 	}
 	opt = append(opt, dfCmd(c))
 	if d.ignoreCache {
@@ -811,17 +811,9 @@ func setBuildArgValue(c instructions.ArgCommand, values map[string]string) instr
 
 func toEnvList(args []instructions.ArgCommand, env []string) []string {
 	for _, arg := range args {
-		env = addEnv(env, arg.Key, getArgValue(arg), false)
+		env = addEnv(env, arg.Key, arg.GetValue(), false)
 	}
 	return env
-}
-
-func getArgValue(arg instructions.ArgCommand) string {
-	v := ""
-	if arg.Value != nil {
-		v = *arg.Value
-	}
-	return v
 }
 
 func dfCmd(cmd interface{}) llb.ConstraintsOpt {
@@ -841,7 +833,7 @@ func dfCmd(cmd interface{}) llb.ConstraintsOpt {
 func runCommandString(args []string, buildArgs []instructions.ArgCommand) string {
 	var tmpBuildEnv []string
 	for _, arg := range buildArgs {
-		tmpBuildEnv = append(tmpBuildEnv, arg.Key+"="+getArgValue(arg))
+		tmpBuildEnv = append(tmpBuildEnv, arg.Key+"="+arg.GetValue())
 	}
 	if len(tmpBuildEnv) > 0 {
 		tmpBuildEnv = append([]string{fmt.Sprintf("|%d", len(tmpBuildEnv))}, tmpBuildEnv...)
