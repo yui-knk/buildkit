@@ -367,6 +367,10 @@ func (c *ArgCommand) Expand(expander SingleWordExpander) error {
 	return nil
 }
 
+func (c *ArgCommand) KeyValuePair() KeyValuePair {
+	return KeyValuePair{Key: c.Key, Value: c.GetValue()}
+}
+
 func (c *ArgCommand) GetValue() string {
 	v := ""
 	if c.Value != nil {

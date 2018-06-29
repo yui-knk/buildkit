@@ -6,6 +6,7 @@ import (
 	"text/scanner"
 	"unicode"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 )
 
@@ -30,6 +31,16 @@ func NewLex(escapeToken rune) *Lex {
 func (s *Lex) ProcessWord(word string, env []string) (string, error) {
 	word, _, err := s.process(word, env)
 	return word, err
+}
+
+func (s *Lex) ProcessWordKvps(word string, kvps instructions.KeyValuePairs) (string, error) {
+	env := []string{}
+
+	for _, kvp := range kvps {
+		env = append(env, kvp.String())
+	}
+
+	return s.ProcessWord(word, env)
 }
 
 // ProcessWords will use the 'env' list of environment variables,

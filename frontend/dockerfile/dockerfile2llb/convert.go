@@ -94,9 +94,14 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	var allDispatchStates []*dispatchState
 	dispatchStatesByName := map[string]*dispatchState{}
 
+	metaArgsKvps := instructions.KeyValuePairs{}
+	for _, metaArg := range metaArgs {
+		metaArgsKvps = append(metaArgsKvps, metaArg.KeyValuePair())
+	}
+
 	// set base state for every image
 	for _, st := range stages {
-		name, err := shlex.ProcessWord(st.BaseName, toEnvList(metaArgs, nil))
+		name, err := shlex.ProcessWordKvps(st.BaseName, metaArgsKvps)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -112,7 +117,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		}
 
 		if v := st.Platform; v != "" {
-			v, err := shlex.ProcessWord(v, toEnvList(metaArgs, nil))
+			v, err := shlex.ProcessWordKvps(st.BaseName, metaArgsKvps)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed to process arguments for platform %s", v)
 			}
