@@ -60,7 +60,7 @@ func stringsToKeyValuePairs(env []string) instructions.KeyValuePairs {
 	kvps := instructions.KeyValuePairs{}
 
 	for _, e := range env {
-		kvps = append(kvps, instructions.NewKeyValuePairFromString(e))
+		kvps = append(kvps, *instructions.NewKeyValuePairFromString(e))
 	}
 
 	return kvps

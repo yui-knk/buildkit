@@ -23,7 +23,7 @@ func (kvp *KeyValuePair) String() string {
 	return kvp.Key + "=" + kvp.Value
 }
 
-func NewKeyValuePairFromString(env string) KeyValuePair {
+func NewKeyValuePairFromString(env string) *KeyValuePair {
 	var key, value string
 	i := strings.Index(env, "=")
 
@@ -37,14 +37,14 @@ func NewKeyValuePairFromString(env string) KeyValuePair {
 		value = env[i+1:]
 	}
 
-	return KeyValuePair{Key: key, Value: value}
+	return &KeyValuePair{Key: key, Value: value}
 }
 
 func NewKeyValuePairsFromStrings(envs []string) *KeyValuePairs {
 	s := KeyValuePairs{}
 
 	for _, env := range envs {
-		s = append(s, NewKeyValuePairFromString(env))
+		s = append(s, *NewKeyValuePairFromString(env))
 	}
 
 	return &s

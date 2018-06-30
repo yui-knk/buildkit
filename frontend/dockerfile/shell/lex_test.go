@@ -120,24 +120,24 @@ func TestGetEnv(t *testing.T) {
 		t.Fatal("2 - 'foo' should map to ''")
 	}
 
-	sw.envs = instructions.KeyValuePairs{instructions.NewKeyValuePairFromString("foo")}
+	sw.envs = instructions.KeyValuePairs{*instructions.NewKeyValuePairFromString("foo")}
 	if sw.getEnv("foo") != "" {
 		t.Fatal("3 - 'foo' should map to ''")
 	}
 
-	sw.envs = instructions.KeyValuePairs{instructions.NewKeyValuePairFromString("foo=")}
+	sw.envs = instructions.KeyValuePairs{*instructions.NewKeyValuePairFromString("foo=")}
 	if sw.getEnv("foo") != "" {
 		t.Fatal("4 - 'foo' should map to ''")
 	}
 
-	sw.envs = instructions.KeyValuePairs{instructions.NewKeyValuePairFromString("foo=bar")}
+	sw.envs = instructions.KeyValuePairs{*instructions.NewKeyValuePairFromString("foo=bar")}
 	if sw.getEnv("foo") != "bar" {
 		t.Fatalf("5 - 'foo' should map to 'bar'. But map to '%s'", sw.getEnv("foo"))
 	}
 
 	sw.envs = instructions.KeyValuePairs{
-		instructions.NewKeyValuePairFromString("foo=bar"),
-		instructions.NewKeyValuePairFromString("car=hat"),
+		*instructions.NewKeyValuePairFromString("foo=bar"),
+		*instructions.NewKeyValuePairFromString("car=hat"),
 	}
 	if sw.getEnv("foo") != "bar" {
 		t.Fatal("6 - 'foo' should map to 'bar'")
@@ -147,9 +147,9 @@ func TestGetEnv(t *testing.T) {
 	}
 
 	sw.envs = instructions.KeyValuePairs{
-		instructions.NewKeyValuePairFromString("foo=bar"),
-		instructions.NewKeyValuePairFromString("car=hat"),
-		instructions.NewKeyValuePairFromString("car=bike"),
+		*instructions.NewKeyValuePairFromString("foo=bar"),
+		*instructions.NewKeyValuePairFromString("car=hat"),
+		*instructions.NewKeyValuePairFromString("car=bike"),
 	}
 	if sw.getEnv("car") != "hat" {
 		t.Fatalf("8 - 'car' should map to 'hat'. But map to '%s'", sw.getEnv("car"))
