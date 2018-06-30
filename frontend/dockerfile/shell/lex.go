@@ -29,18 +29,13 @@ func NewLex(escapeToken rune) *Lex {
 // ProcessWord will use the 'env' list of environment variables,
 // and replace any env var references in 'word'.
 func (s *Lex) ProcessWord(word string, env []string) (string, error) {
-	word, _, err := s.process(word, env)
+	word, _, err := s.process(word, stringsToKeyValuePairs(env))
 	return word, err
 }
 
 func (s *Lex) ProcessWordKvps(word string, kvps instructions.KeyValuePairs) (string, error) {
-	env := []string{}
-
-	for _, kvp := range kvps {
-		env = append(env, kvp.String())
-	}
-
-	return s.ProcessWord(word, env)
+	word, _, err := s.process(word, kvps)
+	return word, err
 }
 
 // ProcessWords will use the 'env' list of environment variables,
@@ -51,13 +46,23 @@ func (s *Lex) ProcessWordKvps(word string, kvps instructions.KeyValuePairs) (str
 // Note, each one is trimmed to remove leading and trailing spaces (unless
 // they are quoted", but ProcessWord retains spaces between words.
 func (s *Lex) ProcessWords(word string, env []string) ([]string, error) {
-	_, words, err := s.process(word, env)
+	_, words, err := s.process(word, stringsToKeyValuePairs(env))
 	return words, err
 }
 
-func (s *Lex) process(word string, env []string) (string, []string, error) {
+func stringsToKeyValuePairs(env []string) instructions.KeyValuePairs {
+	kvps := instructions.KeyValuePairs{}
+
+	for _, e := range env {
+		kvps = append(kvps, instructions.NewKeyValuePairFromString(e))
+	}
+
+	return kvps
+}
+
+func (s *Lex) process(word string, envs instructions.KeyValuePairs) (string, []string, error) {
 	sw := &shellWord{
-		envs:        env,
+		envs:        envs,
 		escapeToken: s.escapeToken,
 	}
 	sw.scanner.Init(strings.NewReader(word))
@@ -66,7 +71,7 @@ func (s *Lex) process(word string, env []string) (string, []string, error) {
 
 type shellWord struct {
 	scanner     scanner.Scanner
-	envs        []string
+	envs        instructions.KeyValuePairs
 	escapeToken rune
 }
 
@@ -365,20 +370,9 @@ func isSpecialParam(char rune) bool {
 
 func (sw *shellWord) getEnv(name string) string {
 	for _, env := range sw.envs {
-		i := strings.Index(env, "=")
-		if i < 0 {
-			if EqualEnvKeys(name, env) {
-				// Should probably never get here, but just in case treat
-				// it like "var" and "var=" are the same
-				return ""
-			}
-			continue
+		if EqualEnvKeys(name, env.Key) {
+			return env.Value
 		}
-		compareName := env[:i]
-		if !EqualEnvKeys(name, compareName) {
-			continue
-		}
-		return env[i+1:]
 	}
 	return ""
 }

@@ -18,6 +18,23 @@ func (kvp *KeyValuePair) String() string {
 	return kvp.Key + "=" + kvp.Value
 }
 
+func NewKeyValuePairFromString(env string) KeyValuePair {
+	var key, value string
+	i := strings.Index(env, "=")
+
+	if i < 0 {
+		key = env
+		// Should probably never get here, but just in case treat
+		// it like "var" and "var=" are the same
+		value = ""
+	} else {
+		key = env[:i]
+		value = env[i+1:]
+	}
+
+	return KeyValuePair{Key: key, Value: value}
+}
+
 // Command is implemented by every command present in a dockerfile
 type Command interface {
 	Name() string

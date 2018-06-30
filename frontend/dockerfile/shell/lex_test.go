@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 )
@@ -114,27 +115,30 @@ func TestShellParser4Words(t *testing.T) {
 func TestGetEnv(t *testing.T) {
 	sw := &shellWord{envs: nil}
 
-	sw.envs = []string{}
+	sw.envs = instructions.KeyValuePairs{}
 	if sw.getEnv("foo") != "" {
 		t.Fatal("2 - 'foo' should map to ''")
 	}
 
-	sw.envs = []string{"foo"}
+	sw.envs = instructions.KeyValuePairs{instructions.NewKeyValuePairFromString("foo")}
 	if sw.getEnv("foo") != "" {
 		t.Fatal("3 - 'foo' should map to ''")
 	}
 
-	sw.envs = []string{"foo="}
+	sw.envs = instructions.KeyValuePairs{instructions.NewKeyValuePairFromString("foo=")}
 	if sw.getEnv("foo") != "" {
 		t.Fatal("4 - 'foo' should map to ''")
 	}
 
-	sw.envs = []string{"foo=bar"}
+	sw.envs = instructions.KeyValuePairs{instructions.NewKeyValuePairFromString("foo=bar")}
 	if sw.getEnv("foo") != "bar" {
-		t.Fatal("5 - 'foo' should map to 'bar'")
+		t.Fatalf("5 - 'foo' should map to 'bar'. But map to '%s'", sw.getEnv("foo"))
 	}
 
-	sw.envs = []string{"foo=bar", "car=hat"}
+	sw.envs = instructions.KeyValuePairs{
+		instructions.NewKeyValuePairFromString("foo=bar"),
+		instructions.NewKeyValuePairFromString("car=hat"),
+	}
 	if sw.getEnv("foo") != "bar" {
 		t.Fatal("6 - 'foo' should map to 'bar'")
 	}
@@ -142,9 +146,12 @@ func TestGetEnv(t *testing.T) {
 		t.Fatal("7 - 'car' should map to 'hat'")
 	}
 
-	// Make sure we grab the first 'car' in the list
-	sw.envs = []string{"foo=bar", "car=hat", "car=bike"}
+	sw.envs = instructions.KeyValuePairs{
+		instructions.NewKeyValuePairFromString("foo=bar"),
+		instructions.NewKeyValuePairFromString("car=hat"),
+		instructions.NewKeyValuePairFromString("car=bike"),
+	}
 	if sw.getEnv("car") != "hat" {
-		t.Fatal("8 - 'car' should map to 'hat'")
+		t.Fatalf("8 - 'car' should map to 'hat'. But map to '%s'", sw.getEnv("car"))
 	}
 }
