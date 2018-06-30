@@ -387,7 +387,7 @@ type dispatchOpt struct {
 func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 	if ex, ok := cmd.Command.(instructions.SupportsSingleWordExpansion); ok {
 		err := ex.Expand(func(word string) (string, error) {
-			return opt.shlex.ProcessWord(word, toEnvList(d.buildArgs, d.image.Config.Env))
+			return opt.shlex.ProcessWordKvps(word, toEnvList(d.buildArgs, instructions.NewKeyValuePairsFromStrings(d.image.Config.Env)))
 		})
 		if err != nil {
 			return err
@@ -498,7 +498,8 @@ func dispatchEnv(d *dispatchState, c *instructions.EnvCommand, commit bool) erro
 	for _, e := range c.Env {
 		commitMessage.WriteString(" " + e.String())
 		d.state = d.state.AddEnv(e.Key, e.Value)
-		d.image.Config.Env = addEnv(d.image.Config.Env, e.Key, e.Value, true)
+		kvps := addEnv(instructions.NewKeyValuePairsFromStrings(d.image.Config.Env), e, true)
+		d.image.Config.Env = kvps.String()
 	}
 	if commit {
 		return commitToHistory(&d.image, commitMessage.String(), false, nil)
@@ -685,7 +686,7 @@ func dispatchHealthcheck(d *dispatchState, c *instructions.HealthCheckCommand) e
 func dispatchExpose(d *dispatchState, c *instructions.ExposeCommand, shlex *shell.Lex) error {
 	ports := []string{}
 	for _, p := range c.Ports {
-		ps, err := shlex.ProcessWords(p, toEnvList(d.buildArgs, d.image.Config.Env))
+		ps, err := shlex.ProcessWordsKvps(p, toEnvList(d.buildArgs, instructions.NewKeyValuePairsFromStrings(d.image.Config.Env)))
 		if err != nil {
 			return err
 		}
@@ -789,28 +790,27 @@ func splitWildcards(name string) (string, string) {
 	return path.Dir(name[:i]), base + name[i:]
 }
 
-func addEnv(env []string, k, v string, override bool) []string {
+func addEnv(env instructions.KeyValuePairs, kvp instructions.KeyValuePair, override bool) instructions.KeyValuePairs {
 	gotOne := false
 	for i, envVar := range env {
-		envParts := strings.SplitN(envVar, "=", 2)
-		compareFrom := envParts[0]
-		if shell.EqualEnvKeys(compareFrom, k) {
+		compareFrom := envVar.Key
+		if shell.EqualEnvKeys(compareFrom, kvp.Key) {
 			if override {
-				env[i] = k + "=" + v
+				env[i] = kvp.Copy()
 			}
 			gotOne = true
 			break
 		}
 	}
 	if !gotOne {
-		env = append(env, k+"="+v)
+		env = append(env, kvp.Copy())
 	}
 	return env
 }
 
-func toEnvList(args []instructions.ArgCommand, env []string) []string {
+func toEnvList(args []instructions.ArgCommand, env instructions.KeyValuePairs) instructions.KeyValuePairs {
 	for _, arg := range args {
-		env = addEnv(env, arg.Key, arg.GetValue(), false)
+		env = addEnv(env, arg.KeyValuePair(), false)
 	}
 	return env
 }

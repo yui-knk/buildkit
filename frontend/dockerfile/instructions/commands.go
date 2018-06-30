@@ -14,6 +14,10 @@ type KeyValuePair struct {
 	Value string
 }
 
+func (kvp *KeyValuePair) Copy() KeyValuePair {
+	return KeyValuePair{Key: kvp.Key, Value: kvp.Value}
+}
+
 func (kvp *KeyValuePair) String() string {
 	return kvp.Key + "=" + kvp.Value
 }
@@ -35,6 +39,16 @@ func NewKeyValuePairFromString(env string) KeyValuePair {
 	return KeyValuePair{Key: key, Value: value}
 }
 
+func NewKeyValuePairsFromStrings(envs []string) KeyValuePairs {
+	s := KeyValuePairs{}
+
+	for _, env := range envs {
+		s = append(s, NewKeyValuePairFromString(env))
+	}
+
+	return s
+}
+
 // Command is implemented by every command present in a dockerfile
 type Command interface {
 	Name() string
@@ -42,6 +56,16 @@ type Command interface {
 
 // KeyValuePairs is a slice of KeyValuePair
 type KeyValuePairs []KeyValuePair
+
+func (kvps *KeyValuePairs) String() []string {
+	envs := []string{}
+
+	for _, kvp := range *kvps {
+		envs = append(envs, kvp.String())
+	}
+
+	return envs
+}
 
 // withNameAndCode is the base of every command in a Dockerfile (String() returns its source code)
 type withNameAndCode struct {

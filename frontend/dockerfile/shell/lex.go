@@ -50,6 +50,11 @@ func (s *Lex) ProcessWords(word string, env []string) ([]string, error) {
 	return words, err
 }
 
+func (s *Lex) ProcessWordsKvps(word string, kvps instructions.KeyValuePairs) ([]string, error) {
+	_, words, err := s.process(word, kvps)
+	return words, err
+}
+
 func stringsToKeyValuePairs(env []string) instructions.KeyValuePairs {
 	kvps := instructions.KeyValuePairs{}
 
