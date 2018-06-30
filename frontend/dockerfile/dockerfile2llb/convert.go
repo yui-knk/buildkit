@@ -80,8 +80,8 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		return nil, nil, err
 	}
 
-	for i := range metaArgs {
-		metaArgs[i] = setBuildArgValue(metaArgs[i], opt.BuildArgs)
+	for _, metaArg := range metaArgs {
+		metaArg.SetBuildArgValue(opt.BuildArgs)
 	}
 
 	shlex := shell.NewLex(dockerfile.EscapeToken)
@@ -756,7 +756,8 @@ func dispatchArg(d *dispatchState, c *instructions.ArgCommand, metaArgs []instru
 		}
 	}
 
-	d.buildArgs = append(d.buildArgs, setBuildArgValue(*c, buildArgValues))
+	c.SetBuildArgValue(buildArgValues)
+	d.buildArgs = append(d.buildArgs, *c)
 	return commitToHistory(&d.image, commitStr, false, nil)
 }
 
@@ -805,13 +806,6 @@ func addEnv(env []string, k, v string, override bool) []string {
 		env = append(env, k+"="+v)
 	}
 	return env
-}
-
-func setBuildArgValue(c instructions.ArgCommand, values map[string]string) instructions.ArgCommand {
-	if v, ok := values[c.Key]; ok {
-		c.Value = &v
-	}
-	return c
 }
 
 func toEnvList(args []instructions.ArgCommand, env []string) []string {

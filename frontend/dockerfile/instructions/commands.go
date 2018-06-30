@@ -396,6 +396,12 @@ func (c *ArgCommand) GetValue() string {
 	return v
 }
 
+func (c *ArgCommand) SetBuildArgValue(values map[string]string) {
+	if v, ok := values[c.Key]; ok {
+		c.Value = &v
+	}
+}
+
 // ShellCommand : SHELL powershell -command
 //
 // Set the non-default shell to use.
