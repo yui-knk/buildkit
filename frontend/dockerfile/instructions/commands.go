@@ -396,10 +396,11 @@ func (c *ArgCommand) GetValue() string {
 	return v
 }
 
-func (c *ArgCommand) SetBuildArgValue(values map[string]string) {
+func (c ArgCommand) SetBuildArgValue(values map[string]string) ArgCommand {
 	if v, ok := values[c.Key]; ok {
 		c.Value = &v
 	}
+	return c
 }
 
 // ShellCommand : SHELL powershell -command

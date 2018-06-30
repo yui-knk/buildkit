@@ -80,8 +80,8 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		return nil, nil, err
 	}
 
-	for _, metaArg := range metaArgs {
-		metaArg.SetBuildArgValue(opt.BuildArgs)
+	for i := range metaArgs {
+		metaArgs[i] = metaArgs[i].SetBuildArgValue(opt.BuildArgs)
 	}
 
 	shlex := shell.NewLex(dockerfile.EscapeToken)
@@ -757,7 +757,7 @@ func dispatchArg(d *dispatchState, c *instructions.ArgCommand, metaArgs []instru
 	}
 
 	c.SetBuildArgValue(buildArgValues)
-	d.buildArgs = append(d.buildArgs, *c)
+	d.buildArgs = append(d.buildArgs, c.SetBuildArgValue(buildArgValues))
 	return commitToHistory(&d.image, commitStr, false, nil)
 }
 
