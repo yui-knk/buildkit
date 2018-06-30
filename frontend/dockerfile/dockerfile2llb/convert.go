@@ -181,7 +181,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
-	for i, d := range allDispatchStates {
+	for _, d := range allDispatchStates {
 		reachable := isReachable(target, d)
 		// resolve image config for every stage
 		if d.base == nil {
@@ -190,7 +190,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 				d.image = emptyImage(*opt.TargetPlatform)
 				continue
 			}
-			func(i int, d *dispatchState) {
+			func(d *dispatchState) {
 				eg.Go(func() error {
 					ref, err := reference.ParseNormalizedNamed(d.stage.BaseName)
 					if err != nil {
@@ -236,7 +236,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 					}
 					return nil
 				})
-			}(i, d)
+			}(d)
 		}
 	}
 
