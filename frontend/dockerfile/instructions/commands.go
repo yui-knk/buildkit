@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
+	"github.com/moby/buildkit/frontend/dockerfile/shellutil"
 )
 
 // KeyValuePair represent an arbitrary named value (useful in slice instead of map[string] string to preserve ordering)
@@ -39,14 +40,14 @@ func NewKeyValuePairFromString(env string) KeyValuePair {
 	return KeyValuePair{Key: key, Value: value}
 }
 
-func NewKeyValuePairsFromStrings(envs []string) KeyValuePairs {
+func NewKeyValuePairsFromStrings(envs []string) *KeyValuePairs {
 	s := KeyValuePairs{}
 
 	for _, env := range envs {
 		s = append(s, NewKeyValuePairFromString(env))
 	}
 
-	return s
+	return &s
 }
 
 // Command is implemented by every command present in a dockerfile
@@ -65,6 +66,23 @@ func (kvps *KeyValuePairs) String() []string {
 	}
 
 	return envs
+}
+
+func (kvps *KeyValuePairs) Merge(other KeyValuePair, override bool) KeyValuePairs {
+	gotOne := false
+	for i, kvp := range *kvps {
+		if shellutil.EqualEnvKeys(kvp.Key, other.Key) {
+			if override {
+				(*kvps)[i] = other.Copy()
+			}
+			gotOne = true
+			break
+		}
+	}
+	if !gotOne {
+		*kvps = append(*kvps, other.Copy())
+	}
+	return *kvps
 }
 
 // withNameAndCode is the base of every command in a Dockerfile (String() returns its source code)

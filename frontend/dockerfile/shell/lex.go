@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/shellutil"
 	"github.com/pkg/errors"
 )
 
@@ -375,7 +376,7 @@ func isSpecialParam(char rune) bool {
 
 func (sw *shellWord) getEnv(name string) string {
 	for _, env := range sw.envs {
-		if EqualEnvKeys(name, env.Key) {
+		if shellutil.EqualEnvKeys(name, env.Key) {
 			return env.Value
 		}
 	}
