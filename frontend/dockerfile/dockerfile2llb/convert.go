@@ -157,7 +157,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	for _, d := range allDispatchStates.states {
 		d.commands = make([]command, len(d.stage.Commands))
 		for i, cmd := range d.stage.Commands {
-			newCmd, err := toCommand(cmd, allDispatchStates.statesByName, allDispatchStates)
+			newCmd, err := toCommand(cmd, allDispatchStates)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -272,17 +272,16 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		}
 
 		opt := dispatchOpt{
-			allDispatchStates:    allDispatchStates,
-			dispatchStatesByName: allDispatchStates.statesByName,
-			metaArgs:             metaArgs,
-			buildArgValues:       opt.BuildArgs,
-			shlex:                shlex,
-			sessionID:            opt.SessionID,
-			buildContext:         llb.NewState(buildContext),
-			proxyEnv:             proxyEnv,
-			cacheIDNamespace:     opt.CacheIDNamespace,
-			buildPlatforms:       opt.BuildPlatforms,
-			targetPlatform:       *opt.TargetPlatform,
+			allDispatchStates: allDispatchStates,
+			metaArgs:          metaArgs,
+			buildArgValues:    opt.BuildArgs,
+			shlex:             shlex,
+			sessionID:         opt.SessionID,
+			buildContext:      llb.NewState(buildContext),
+			proxyEnv:          proxyEnv,
+			cacheIDNamespace:  opt.CacheIDNamespace,
+			buildPlatforms:    opt.BuildPlatforms,
+			targetPlatform:    *opt.TargetPlatform,
 		}
 
 		if err = dispatchOnBuild(d, d.image.Config.OnBuild, opt); err != nil {
@@ -331,7 +330,8 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	return &st, &target.image, nil
 }
 
-func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatchState, allDispatchStates dispatchStates) (command, error) {
+func toCommand(ic instructions.Command, allDispatchStates dispatchStates) (command, error) {
+	dispatchStatesByName := allDispatchStates.statesByName
 	cmd := command{Command: ic}
 	if c, ok := ic.(*instructions.CopyCommand); ok {
 		if c.From != "" {
@@ -364,17 +364,20 @@ func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatc
 }
 
 type dispatchOpt struct {
-	allDispatchStates    dispatchStates
-	dispatchStatesByName map[string]*dispatchState
-	metaArgs             []instructions.ArgCommand
-	buildArgValues       map[string]string
-	shlex                *shell.Lex
-	sessionID            string
-	buildContext         llb.State
-	proxyEnv             *llb.ProxyEnv
-	cacheIDNamespace     string
-	targetPlatform       specs.Platform
-	buildPlatforms       []specs.Platform
+	allDispatchStates dispatchStates
+	metaArgs          []instructions.ArgCommand
+	buildArgValues    map[string]string
+	shlex             *shell.Lex
+	sessionID         string
+	buildContext      llb.State
+	proxyEnv          *llb.ProxyEnv
+	cacheIDNamespace  string
+	targetPlatform    specs.Platform
+	buildPlatforms    []specs.Platform
+}
+
+func (opt *dispatchOpt) dispatchStatesByName() map[string]*dispatchState {
+	return opt.allDispatchStates.statesByName
 }
 
 func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
@@ -504,7 +507,7 @@ func dispatchOnBuild(d *dispatchState, triggers []string, opt dispatchOpt) error
 		if err != nil {
 			return err
 		}
-		cmd, err := toCommand(ic, opt.dispatchStatesByName, opt.allDispatchStates)
+		cmd, err := toCommand(ic, opt.allDispatchStates)
 		if err != nil {
 			return err
 		}
