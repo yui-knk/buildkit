@@ -91,8 +91,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		metaResolver = imagemetaresolver.Default()
 	}
 
-	var allDispatchStates dispatchStates
-	dispatchStatesByName := map[string]*dispatchState{}
+	allDispatchStates := *newDispatchStates()
 
 	metaArgsKvps := instructions.KeyValuePairs{}
 	for _, metaArg := range metaArgs {
@@ -129,13 +128,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 			ds.platform = &p
 		}
 
-		if d, ok := dispatchStatesByName[st.BaseName]; ok {
-			ds.base = d
-		}
 		allDispatchStates.addState(ds)
-		if st.Name != "" {
-			dispatchStatesByName[strings.ToLower(st.Name)] = ds
-		}
 		if opt.IgnoreCache != nil {
 			if len(opt.IgnoreCache) == 0 {
 				ds.ignoreCache = true
@@ -154,7 +147,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		target = allDispatchStates.lastTarget()
 	} else {
 		var ok bool
-		target, ok = dispatchStatesByName[strings.ToLower(opt.Target)]
+		target, ok = allDispatchStates.findStateByName(opt.Target)
 		if !ok {
 			return nil, nil, errors.Errorf("target stage %s could not be found", opt.Target)
 		}
@@ -164,7 +157,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	for _, d := range allDispatchStates.states {
 		d.commands = make([]command, len(d.stage.Commands))
 		for i, cmd := range d.stage.Commands {
-			newCmd, err := toCommand(cmd, dispatchStatesByName, allDispatchStates)
+			newCmd, err := toCommand(cmd, allDispatchStates.statesByName, allDispatchStates)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -280,7 +273,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 
 		opt := dispatchOpt{
 			allDispatchStates:    allDispatchStates,
-			dispatchStatesByName: dispatchStatesByName,
+			dispatchStatesByName: allDispatchStates.statesByName,
 			metaArgs:             metaArgs,
 			buildArgValues:       opt.BuildArgs,
 			shlex:                shlex,
@@ -465,11 +458,28 @@ type dispatchState struct {
 }
 
 type dispatchStates struct {
-	states []*dispatchState
+	states       []*dispatchState
+	statesByName map[string]*dispatchState
+}
+
+func newDispatchStates() *dispatchStates {
+	return &dispatchStates{statesByName: map[string]*dispatchState{}}
 }
 
 func (dss *dispatchStates) addState(ds *dispatchState) {
 	dss.states = append(dss.states, ds)
+
+	if d, ok := dss.statesByName[ds.stage.BaseName]; ok {
+		ds.base = d
+	}
+	if ds.stage.Name != "" {
+		dss.statesByName[strings.ToLower(ds.stage.Name)] = ds
+	}
+}
+
+func (dss *dispatchStates) findStateByName(name string) (*dispatchState, bool) {
+	ds, ok := dss.statesByName[strings.ToLower(name)]
+	return ds, ok
 }
 
 func (dss *dispatchStates) lastTarget() *dispatchState {
