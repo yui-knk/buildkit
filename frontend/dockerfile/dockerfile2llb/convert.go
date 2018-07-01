@@ -338,7 +338,7 @@ func toCommand(ic instructions.Command, allDispatchStates dispatchStates) (comma
 			var stn *dispatchState
 			index, err := strconv.Atoi(c.From)
 			if err != nil {
-				stn, ok = dispatchStatesByName[strings.ToLower(c.From)]
+				stn, ok = allDispatchStates.findStateByName(c.From)
 				if !ok {
 					stn = &dispatchState{
 						stage:        instructions.Stage{BaseName: c.From},
