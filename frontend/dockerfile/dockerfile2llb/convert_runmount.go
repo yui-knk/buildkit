@@ -34,7 +34,7 @@ func detectRunMount(cmd *command, dispatchStatesByName map[string]*dispatchState
 			}
 			sources[i] = stn
 		}
-		cmd.sources = sources
+		cmd.sources.states = sources
 		return true
 	}
 
