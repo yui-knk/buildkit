@@ -91,7 +91,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		metaResolver = imagemetaresolver.Default()
 	}
 
-	var allDispatchStates []*dispatchState
+	var allDispatchStates dispatchStates
 	dispatchStatesByName := map[string]*dispatchState{}
 
 	metaArgsKvps := instructions.KeyValuePairs{}
@@ -338,7 +338,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	return &st, &target.image, nil
 }
 
-func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatchState, allDispatchStates []*dispatchState) (command, error) {
+func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatchState, allDispatchStates dispatchStates) (command, error) {
 	cmd := command{Command: ic}
 	if c, ok := ic.(*instructions.CopyCommand); ok {
 		if c.From != "" {
@@ -359,7 +359,7 @@ func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatc
 				}
 				stn = allDispatchStates[index]
 			}
-			cmd.sources = []*dispatchState{stn}
+			cmd.sources = dispatchStates{stn}
 		}
 	}
 
@@ -371,7 +371,7 @@ func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatc
 }
 
 type dispatchOpt struct {
-	allDispatchStates    []*dispatchState
+	allDispatchStates    dispatchStates
 	dispatchStatesByName map[string]*dispatchState
 	metaArgs             []instructions.ArgCommand
 	buildArgValues       map[string]string
@@ -464,9 +464,11 @@ type dispatchState struct {
 	unregistered bool
 }
 
+type dispatchStates []*dispatchState
+
 type command struct {
 	instructions.Command
-	sources []*dispatchState
+	sources dispatchStates
 }
 
 func dispatchOnBuild(d *dispatchState, triggers []string, opt dispatchOpt) error {
@@ -507,7 +509,7 @@ func dispatchEnv(d *dispatchState, c *instructions.EnvCommand, commit bool) erro
 	return nil
 }
 
-func dispatchRun(d *dispatchState, c *instructions.RunCommand, proxy *llb.ProxyEnv, sources []*dispatchState, dopt dispatchOpt) error {
+func dispatchRun(d *dispatchState, c *instructions.RunCommand, proxy *llb.ProxyEnv, sources dispatchStates, dopt dispatchOpt) error {
 	var args []string = c.CmdLine
 	if c.PrependShell {
 		args = withShell(d.image, args)
