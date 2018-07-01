@@ -375,10 +375,6 @@ type dispatchOpt struct {
 	buildPlatforms    []specs.Platform
 }
 
-func (opt *dispatchOpt) dispatchStatesByName() map[string]*dispatchState {
-	return opt.allDispatchStates.statesByName
-}
-
 func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 	if ex, ok := cmd.Command.(instructions.SupportsSingleWordExpansion); ok {
 		err := ex.Expand(func(word string) (string, error) {
