@@ -25,11 +25,8 @@ func detectRunMount(cmd *command, allDispatchStates dispatchStates) bool {
 			}
 			stn, ok := allDispatchStates.findStateByName(from)
 			if !ok {
-				stn = &dispatchState{
-					stage:        instructions.Stage{BaseName: from},
-					deps:         make(map[*dispatchState]struct{}),
-					unregistered: true,
-				}
+				stn = newDispatchState(&instructions.Stage{BaseName: from})
+				stn.unregistered = true
 			}
 			sources[i] = stn
 		}

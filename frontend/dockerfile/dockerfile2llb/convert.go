@@ -109,11 +109,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		}
 		st.BaseName = name
 
-		ds := &dispatchState{
-			stage:    st,
-			deps:     make(map[*dispatchState]struct{}),
-			ctxPaths: make(map[string]struct{}),
-		}
+		ds := newDispatchState(&st)
 
 		if v := st.Platform; v != "" {
 			v, err := shlex.ProcessWordKvps(st.BaseName, metaArgsKvps)
@@ -339,11 +335,8 @@ func toCommand(ic instructions.Command, allDispatchStates dispatchStates) (comma
 			if err != nil {
 				stn, ok = allDispatchStates.findStateByName(c.From)
 				if !ok {
-					stn = &dispatchState{
-						stage:        instructions.Stage{BaseName: c.From},
-						deps:         make(map[*dispatchState]struct{}),
-						unregistered: true,
-					}
+					stn = newDispatchState(&instructions.Stage{BaseName: c.From})
+					stn.unregistered = true
 				}
 			} else {
 				stn, err = allDispatchStates.findStateByIndex(index)
@@ -453,6 +446,14 @@ type dispatchState struct {
 	ignoreCache  bool
 	cmdSet       bool
 	unregistered bool
+}
+
+func newDispatchState(st *instructions.Stage) *dispatchState {
+	return &dispatchState{
+		stage:    *st,
+		deps:     make(map[*dispatchState]struct{}),
+		ctxPaths: make(map[string]struct{}),
+	}
 }
 
 type dispatchStates struct {
