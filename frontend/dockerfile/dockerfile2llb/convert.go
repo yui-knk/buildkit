@@ -132,7 +132,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 		if d, ok := dispatchStatesByName[st.BaseName]; ok {
 			ds.base = d
 		}
-		allDispatchStates = append(allDispatchStates, ds)
+		allDispatchStates.addState(ds)
 		if st.Name != "" {
 			dispatchStatesByName[strings.ToLower(st.Name)] = ds
 		}
@@ -151,7 +151,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 
 	var target *dispatchState
 	if opt.Target == "" {
-		target = allDispatchStates[len(allDispatchStates)-1]
+		target = allDispatchStates.lastTarget()
 	} else {
 		var ok bool
 		target, ok = dispatchStatesByName[strings.ToLower(opt.Target)]
@@ -161,7 +161,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	}
 
 	// fill dependencies to stages so unreachable ones can avoid loading image configs
-	for _, d := range allDispatchStates {
+	for _, d := range allDispatchStates.states {
 		d.commands = make([]command, len(d.stage.Commands))
 		for i, cmd := range d.stage.Commands {
 			newCmd, err := toCommand(cmd, dispatchStatesByName, allDispatchStates)
@@ -169,11 +169,11 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 				return nil, nil, err
 			}
 			d.commands[i] = newCmd
-			for _, src := range newCmd.sources {
+			for _, src := range newCmd.sources.states {
 				if src != nil {
 					d.deps[src] = struct{}{}
 					if src.unregistered {
-						allDispatchStates = append(allDispatchStates, src)
+						allDispatchStates.addState(src)
 					}
 				}
 			}
@@ -181,7 +181,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
-	for _, d := range allDispatchStates {
+	for _, d := range allDispatchStates.states {
 		reachable := isReachable(target, d)
 		// resolve image config for every stage
 		if d.base == nil {
@@ -247,7 +247,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 	buildContext := &mutableOutput{}
 	ctxPaths := map[string]struct{}{}
 
-	for _, d := range allDispatchStates {
+	for _, d := range allDispatchStates.states {
 		if !isReachable(target, d) {
 			continue
 		}
@@ -354,16 +354,16 @@ func toCommand(ic instructions.Command, dispatchStatesByName map[string]*dispatc
 					}
 				}
 			} else {
-				if index < 0 || index >= len(allDispatchStates) {
+				if index < 0 || index >= len(allDispatchStates.states) {
 					return command{}, errors.Errorf("invalid stage index %d", index)
 				}
-				stn = allDispatchStates[index]
+				stn = allDispatchStates.states[index]
 			}
-			cmd.sources = dispatchStates{stn}
+			cmd.sources = dispatchStates{states: []*dispatchState{stn}}
 		}
 	}
 
-	if ok := detectRunMount(&cmd, dispatchStatesByName, allDispatchStates); ok {
+	if ok := detectRunMount(&cmd, dispatchStatesByName, allDispatchStates.states); ok {
 		return cmd, nil
 	}
 
@@ -435,11 +435,11 @@ func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 		err = dispatchArg(d, c, opt.metaArgs, opt.buildArgValues)
 	case *instructions.CopyCommand:
 		l := opt.buildContext
-		if len(cmd.sources) != 0 {
-			l = cmd.sources[0].state
+		if len(cmd.sources.states) != 0 {
+			l = cmd.sources.states[0].state
 		}
 		err = dispatchCopy(d, c.SourcesAndDest, l, false, c, c.Chown, opt)
-		if err == nil && len(cmd.sources) == 0 {
+		if err == nil && len(cmd.sources.states) == 0 {
 			for _, src := range c.Sources() {
 				d.ctxPaths[path.Join("/", filepath.ToSlash(src))] = struct{}{}
 			}
@@ -464,7 +464,17 @@ type dispatchState struct {
 	unregistered bool
 }
 
-type dispatchStates []*dispatchState
+type dispatchStates struct {
+	states []*dispatchState
+}
+
+func (dss *dispatchStates) addState(ds *dispatchState) {
+	dss.states = append(dss.states, ds)
+}
+
+func (dss *dispatchStates) lastTarget() *dispatchState {
+	return dss.states[len(dss.states)-1]
+}
 
 type command struct {
 	instructions.Command
@@ -528,7 +538,7 @@ func dispatchRun(d *dispatchState, c *instructions.RunCommand, proxy *llb.ProxyE
 		opt = append(opt, llb.WithProxy(*proxy))
 	}
 
-	runMounts, err := dispatchRunMounts(d, c, sources, dopt)
+	runMounts, err := dispatchRunMounts(d, c, sources.states, dopt)
 	if err != nil {
 		return err
 	}
