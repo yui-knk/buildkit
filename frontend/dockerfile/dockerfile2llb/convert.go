@@ -346,10 +346,10 @@ func toCommand(ic instructions.Command, allDispatchStates dispatchStates) (comma
 					}
 				}
 			} else {
-				if index < 0 || index >= len(allDispatchStates.states) {
-					return command{}, errors.Errorf("invalid stage index %d", index)
+				stn, err = allDispatchStates.findStateByIndex(index)
+				if err != nil {
+					return command{}, err
 				}
-				stn = allDispatchStates.states[index]
 			}
 			cmd.sources = dispatchStates{states: []*dispatchState{stn}}
 		}
@@ -478,6 +478,14 @@ func (dss *dispatchStates) addState(ds *dispatchState) {
 func (dss *dispatchStates) findStateByName(name string) (*dispatchState, bool) {
 	ds, ok := dss.statesByName[strings.ToLower(name)]
 	return ds, ok
+}
+
+func (dss *dispatchStates) findStateByIndex(index int) (*dispatchState, error) {
+	if index < 0 || index >= len(dss.states) {
+		return nil, errors.Errorf("invalid stage index %d", index)
+	}
+
+	return dss.states[index], nil
 }
 
 func (dss *dispatchStates) lastTarget() *dispatchState {
