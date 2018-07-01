@@ -331,7 +331,6 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 }
 
 func toCommand(ic instructions.Command, allDispatchStates dispatchStates) (command, error) {
-	dispatchStatesByName := allDispatchStates.statesByName
 	cmd := command{Command: ic}
 	if c, ok := ic.(*instructions.CopyCommand); ok {
 		if c.From != "" {
@@ -356,7 +355,7 @@ func toCommand(ic instructions.Command, allDispatchStates dispatchStates) (comma
 		}
 	}
 
-	if ok := detectRunMount(&cmd, dispatchStatesByName, allDispatchStates.states); ok {
+	if ok := detectRunMount(&cmd, allDispatchStates); ok {
 		return cmd, nil
 	}
 
