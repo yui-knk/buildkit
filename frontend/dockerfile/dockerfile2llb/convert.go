@@ -271,7 +271,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 			}
 		}
 
-		opt := dispatchOpt{
+		dopt := dispatchOpt{
 			allDispatchStates: allDispatchStates,
 			metaArgs:          metaArgs,
 			buildArgValues:    opt.BuildArgs,
@@ -284,12 +284,12 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 			targetPlatform:    *opt.TargetPlatform,
 		}
 
-		if err = dispatchOnBuild(d, d.image.Config.OnBuild, opt); err != nil {
+		if err = dispatchOnBuild(d, d.image.Config.OnBuild, dopt); err != nil {
 			return nil, nil, err
 		}
 
 		for _, cmd := range d.commands {
-			if err := dispatch(d, cmd, opt); err != nil {
+			if err := dispatch(d, cmd, dopt); err != nil {
 				return nil, nil, err
 			}
 		}
