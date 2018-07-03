@@ -124,21 +124,21 @@ func getPlatform(s State) *specs.Platform {
 	return nil
 }
 
-type EnvList []KeyValue
+type EnvList []keyValue
 
-type KeyValue struct {
+type keyValue struct {
 	key   string
 	value string
 }
 
 func (e EnvList) AddOrReplace(k, v string) EnvList {
 	e = e.Delete(k)
-	e = append(e, KeyValue{key: k, value: v})
+	e = append(e, keyValue{key: k, value: v})
 	return e
 }
 
 func (e EnvList) Delete(k string) EnvList {
-	e = append([]KeyValue(nil), e...)
+	e = append([]keyValue(nil), e...)
 	if i, ok := e.Index(k); ok {
 		return append(e[:i], e[i+1:]...)
 	}
