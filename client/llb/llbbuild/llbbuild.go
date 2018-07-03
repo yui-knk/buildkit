@@ -17,16 +17,16 @@ func NewBuildOp(source llb.Output, opt ...BuildOption) llb.Vertex {
 	for _, o := range opt {
 		o(info)
 	}
-	return &build{source: source, info: info, constraints: info.Constraints}
+	return &build{source: source, definitionFilename: info.DefinitionFilename, constraints: info.Constraints}
 }
 
 type build struct {
 	llb.MarshalCache
-	source         llb.Output
-	info           *BuildInfo
-	cachedPBDigest digest.Digest
-	cachedPB       []byte
-	constraints    llb.Constraints
+	source             llb.Output
+	definitionFilename string
+	cachedPBDigest     digest.Digest
+	cachedPB           []byte
+	constraints        llb.Constraints
 }
 
 func (b *build) ToInput(c *llb.Constraints) (*pb.Input, error) {
@@ -57,8 +57,8 @@ func (b *build) Marshal(c *llb.Constraints) (digest.Digest, []byte, *pb.OpMetada
 
 	pbo.Attrs = map[string]string{}
 
-	if b.info.DefinitionFilename != "" {
-		pbo.Attrs[pb.AttrLLBDefinitionFilename] = b.info.DefinitionFilename
+	if b.definitionFilename != "" {
+		pbo.Attrs[pb.AttrLLBDefinitionFilename] = b.definitionFilename
 	}
 
 	pop, md := llb.MarshalConstraints(c, &b.constraints)
