@@ -391,7 +391,7 @@ func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 	case *instructions.WorkdirCommand:
 		err = dispatchWorkdir(d, c, true)
 	case *instructions.AddCommand:
-		err = dispatchAdd(d, c.SourcesAndDest, opt.buildContext, true, c, "", opt)
+		err = dispatchAdd(d, c.SourcesAndDest, opt.buildContext, c, "", opt)
 		if err == nil {
 			for _, src := range c.Sources() {
 				d.ctxPaths[path.Join("/", filepath.ToSlash(src))] = struct{}{}
@@ -424,7 +424,7 @@ func dispatch(d *dispatchState, cmd command, opt dispatchOpt) error {
 		if len(cmd.sources) != 0 {
 			l = cmd.sources[0].state
 		}
-		err = dispatchCopy(d, c.SourcesAndDest, l, false, c, c.Chown, opt)
+		err = dispatchCopy(d, c.SourcesAndDest, l, c, c.Chown, opt)
 		if err == nil && len(cmd.sources) == 0 {
 			for _, src := range c.Sources() {
 				d.ctxPaths[path.Join("/", filepath.ToSlash(src))] = struct{}{}
@@ -571,7 +571,7 @@ func dispatchWorkdir(d *dispatchState, c *instructions.WorkdirCommand, commit bo
 	return nil
 }
 
-func dispatchAdd(d *dispatchState, c instructions.SourcesAndDest, sourceState llb.State, isAddCommand bool, cmdToPrint interface{}, chown string, opt dispatchOpt) error {
+func dispatchAdd(d *dispatchState, c instructions.SourcesAndDest, sourceState llb.State, cmdToPrint interface{}, chown string, opt dispatchOpt) error {
 	// TODO: this should use CopyOp instead. Current implementation is inefficient
 	img := llb.Image(CopyImage, llb.Platform(opt.buildPlatforms[0]))
 
@@ -580,7 +580,7 @@ func dispatchAdd(d *dispatchState, c instructions.SourcesAndDest, sourceState ll
 		dest += string(filepath.Separator)
 	}
 	args := []string{"copy"}
-	unpack := isAddCommand
+	unpack := true
 
 	mounts := make([]llb.RunOption, 0, len(c.Sources()))
 	if chown != "" {
@@ -593,19 +593,11 @@ func dispatchAdd(d *dispatchState, c instructions.SourcesAndDest, sourceState ll
 	}
 
 	commitMessage := bytes.NewBufferString("")
-	if isAddCommand {
-		commitMessage.WriteString("ADD")
-	} else {
-		commitMessage.WriteString("COPY")
-	}
+	commitMessage.WriteString("ADD")
 
 	for i, src := range c.Sources() {
 		commitMessage.WriteString(" " + src)
 		if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
-			if !isAddCommand {
-				return errors.New("source can't be a URL for COPY")
-			}
-
 			// Resources from remote URLs are not decompressed.
 			// https://docs.docker.com/engine/reference/builder/#add
 			//
@@ -653,7 +645,7 @@ func dispatchAdd(d *dispatchState, c instructions.SourcesAndDest, sourceState ll
 	return commitToHistory(&d.image, commitMessage.String(), true, &d.state)
 }
 
-func dispatchCopy(d *dispatchState, c instructions.SourcesAndDest, sourceState llb.State, isAddCommand bool, cmdToPrint interface{}, chown string, opt dispatchOpt) error {
+func dispatchCopy(d *dispatchState, c instructions.SourcesAndDest, sourceState llb.State, cmdToPrint interface{}, chown string, opt dispatchOpt) error {
 	// TODO: this should use CopyOp instead. Current implementation is inefficient
 	img := llb.Image(CopyImage, llb.Platform(opt.buildPlatforms[0]))
 
@@ -662,7 +654,6 @@ func dispatchCopy(d *dispatchState, c instructions.SourcesAndDest, sourceState l
 		dest += string(filepath.Separator)
 	}
 	args := []string{"copy"}
-	unpack := isAddCommand
 
 	mounts := make([]llb.RunOption, 0, len(c.Sources()))
 	if chown != "" {
@@ -675,35 +666,12 @@ func dispatchCopy(d *dispatchState, c instructions.SourcesAndDest, sourceState l
 	}
 
 	commitMessage := bytes.NewBufferString("")
-	if isAddCommand {
-		commitMessage.WriteString("ADD")
-	} else {
-		commitMessage.WriteString("COPY")
-	}
+	commitMessage.WriteString("COPY")
 
 	for i, src := range c.Sources() {
 		commitMessage.WriteString(" " + src)
 		if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") {
-			if !isAddCommand {
-				return errors.New("source can't be a URL for COPY")
-			}
-
-			// Resources from remote URLs are not decompressed.
-			// https://docs.docker.com/engine/reference/builder/#add
-			//
-			// Note: mixing up remote archives and local archives in a single ADD instruction
-			// would result in undefined behavior: https://github.com/moby/buildkit/pull/387#discussion_r189494717
-			unpack = false
-			u, err := url.Parse(src)
-			f := "__unnamed__"
-			if err == nil {
-				if base := path.Base(u.Path); base != "." && base != "/" {
-					f = base
-				}
-			}
-			target := path.Join(fmt.Sprintf("/src-%d", i), f)
-			args = append(args, target)
-			mounts = append(mounts, llb.AddMount(path.Dir(target), llb.HTTP(src, llb.Filename(f), dfCmd(c)), llb.Readonly))
+			return errors.New("source can't be a URL for COPY")
 		} else {
 			d, f := splitWildcards(src)
 			targetCmd := fmt.Sprintf("/src-%d", i)
@@ -721,9 +689,6 @@ func dispatchCopy(d *dispatchState, c instructions.SourcesAndDest, sourceState l
 	commitMessage.WriteString(" " + c.Dest())
 
 	args = append(args, dest)
-	if unpack {
-		args = append(args[:1], append([]string{"--unpack"}, args[1:]...)...)
-	}
 
 	runOpt := []llb.RunOption{llb.Args(args), llb.Dir("/dest"), llb.ReadonlyRootFS(), dfCmd(cmdToPrint)}
 	if d.ignoreCache {
