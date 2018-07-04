@@ -773,18 +773,20 @@ func dispatchShell(d *dispatchState, c *instructions.ShellCommand) error {
 
 func dispatchArg(d *dispatchState, c *instructions.ArgCommand, metaArgs []keyValuePair, buildArgValues map[string]string) error {
 	commitStr := "ARG " + c.Key
+	buildArg := buildKeyValuePair(*c, buildArgValues)
+
 	if c.Value != nil {
 		commitStr += "=" + *c.Value
 	}
-	if c.Value == nil {
+	if buildArg.value == nil {
 		for _, ma := range metaArgs {
-			if ma.key == c.Key {
-				c.Value = ma.value
+			if ma.key == buildArg.key {
+				buildArg.value = ma.value
 			}
 		}
 	}
 
-	d.buildArgs = append(d.buildArgs, buildKeyValuePair(*c, buildArgValues))
+	d.buildArgs = append(d.buildArgs, buildArg)
 	return commitToHistory(&d.image, commitStr, false, nil)
 }
 
