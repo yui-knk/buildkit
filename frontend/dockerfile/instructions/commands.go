@@ -18,6 +18,12 @@ func (kvp *KeyValuePair) String() string {
 	return kvp.Key + "=" + kvp.Value
 }
 
+// KeyValuePairOptional is the same as KeyValuePair but Value is optional
+type KeyValuePairOptional struct {
+	Key   string
+	Value *string
+}
+
 // Command is implemented by every command present in a dockerfile
 type Command interface {
 	Name() string
@@ -346,8 +352,7 @@ func (c *StopSignalCommand) CheckPlatform(platform string) error {
 // Dockerfile author may optionally set a default value of this variable.
 type ArgCommand struct {
 	withNameAndCode
-	Key   string
-	Value *string
+	KeyValuePairOptional
 }
 
 // Expand variables
