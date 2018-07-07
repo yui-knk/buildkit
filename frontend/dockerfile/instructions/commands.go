@@ -24,6 +24,14 @@ type KeyValuePairOptional struct {
 	Value *string
 }
 
+func (kvpo *KeyValuePairOptional) ValueString() string {
+	v := ""
+	if kvpo.Value != nil {
+		v = *kvpo.Value
+	}
+	return v
+}
+
 // Command is implemented by every command present in a dockerfile
 type Command interface {
 	Name() string
@@ -370,6 +378,15 @@ func (c *ArgCommand) Expand(expander SingleWordExpander) error {
 		c.Value = &p
 	}
 	return nil
+}
+
+func (c *ArgCommand) BuildKeyValuePairOptional(values map[string]string) KeyValuePairOptional {
+	kvp := KeyValuePairOptional{Key: c.Key, Value: c.Value}
+
+	if v, ok := values[c.Key]; ok {
+		kvp.Value = &v
+	}
+	return kvp
 }
 
 // ShellCommand : SHELL powershell -command

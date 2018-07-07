@@ -82,7 +82,7 @@ func Dockerfile2LLB(ctx context.Context, dt []byte, opt ConvertOpt) (*llb.State,
 
 	optMetaArgs := []instructions.KeyValuePairOptional{}
 	for _, metaArg := range metaArgs {
-		optMetaArgs = append(optMetaArgs, buildKeyValuePair(metaArg, opt.BuildArgs))
+		optMetaArgs = append(optMetaArgs, metaArg.BuildKeyValuePairOptional(opt.BuildArgs))
 	}
 
 	shlex := shell.NewLex(dockerfile.EscapeToken)
@@ -539,7 +539,7 @@ func dispatchRun(d *dispatchState, c *instructions.RunCommand, proxy *llb.ProxyE
 	}
 	opt := []llb.RunOption{llb.Args(args)}
 	for _, arg := range d.buildArgs {
-		opt = append(opt, llb.AddEnv(arg.Key, getArgValue(arg)))
+		opt = append(opt, llb.AddEnv(arg.Key, arg.ValueString()))
 	}
 	opt = append(opt, dfCmd(c))
 	if d.ignoreCache {
@@ -773,7 +773,7 @@ func dispatchShell(d *dispatchState, c *instructions.ShellCommand) error {
 
 func dispatchArg(d *dispatchState, c *instructions.ArgCommand, metaArgs []instructions.KeyValuePairOptional, buildArgValues map[string]string) error {
 	commitStr := "ARG " + c.Key
-	buildArg := buildKeyValuePair(*c, buildArgValues)
+	buildArg := c.BuildKeyValuePairOptional(buildArgValues)
 
 	if c.Value != nil {
 		commitStr += "=" + *c.Value
@@ -837,28 +837,11 @@ func addEnv(env []string, k, v string, override bool) []string {
 	return env
 }
 
-func buildKeyValuePair(c instructions.ArgCommand, values map[string]string) instructions.KeyValuePairOptional {
-	kvp := instructions.KeyValuePairOptional{Key: c.Key, Value: c.Value}
-
-	if v, ok := values[c.Key]; ok {
-		kvp.Value = &v
-	}
-	return kvp
-}
-
 func toEnvList(args []instructions.KeyValuePairOptional, env []string) []string {
 	for _, arg := range args {
-		env = addEnv(env, arg.Key, getArgValue(arg), false)
+		env = addEnv(env, arg.Key, arg.ValueString(), false)
 	}
 	return env
-}
-
-func getArgValue(arg instructions.KeyValuePairOptional) string {
-	v := ""
-	if arg.Value != nil {
-		v = *arg.Value
-	}
-	return v
 }
 
 func dfCmd(cmd interface{}) llb.ConstraintsOpt {
@@ -878,7 +861,7 @@ func dfCmd(cmd interface{}) llb.ConstraintsOpt {
 func runCommandString(args []string, buildArgs []instructions.KeyValuePairOptional) string {
 	var tmpBuildEnv []string
 	for _, arg := range buildArgs {
-		tmpBuildEnv = append(tmpBuildEnv, arg.Key+"="+getArgValue(arg))
+		tmpBuildEnv = append(tmpBuildEnv, arg.Key+"="+arg.ValueString())
 	}
 	if len(tmpBuildEnv) > 0 {
 		tmpBuildEnv = append([]string{fmt.Sprintf("|%d", len(tmpBuildEnv))}, tmpBuildEnv...)
