@@ -6,6 +6,7 @@ import (
 	"text/scanner"
 	"unicode"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +29,7 @@ func NewLex(escapeToken rune) *Lex {
 // ProcessWord will use the 'env' list of environment variables,
 // and replace any env var references in 'word'.
 func (s *Lex) ProcessWord(word string, env []string) (string, error) {
-	word, _, err := s.process(word, env)
+	word, _, err := s.process(word, stringsToKeyValuePairOptionals(env))
 	return word, err
 }
 
@@ -40,11 +41,11 @@ func (s *Lex) ProcessWord(word string, env []string) (string, error) {
 // Note, each one is trimmed to remove leading and trailing spaces (unless
 // they are quoted", but ProcessWord retains spaces between words.
 func (s *Lex) ProcessWords(word string, env []string) ([]string, error) {
-	_, words, err := s.process(word, env)
+	_, words, err := s.process(word, stringsToKeyValuePairOptionals(env))
 	return words, err
 }
 
-func (s *Lex) process(word string, env []string) (string, []string, error) {
+func (s *Lex) process(word string, env []instructions.KeyValuePairOptional) (string, []string, error) {
 	sw := &shellWord{
 		envs:        env,
 		escapeToken: s.escapeToken,
@@ -55,7 +56,7 @@ func (s *Lex) process(word string, env []string) (string, []string, error) {
 
 type shellWord struct {
 	scanner     scanner.Scanner
-	envs        []string
+	envs        []instructions.KeyValuePairOptional
 	escapeToken rune
 }
 
@@ -354,20 +355,30 @@ func isSpecialParam(char rune) bool {
 
 func (sw *shellWord) getEnv(name string) string {
 	for _, env := range sw.envs {
-		i := strings.Index(env, "=")
-		if i < 0 {
-			if EqualEnvKeys(name, env) {
-				// Should probably never get here, but just in case treat
-				// it like "var" and "var=" are the same
-				return ""
-			}
-			continue
+		if EqualEnvKeys(name, env.Key) {
+			return env.ValueString()
 		}
-		compareName := env[:i]
-		if !EqualEnvKeys(name, compareName) {
-			continue
-		}
-		return env[i+1:]
 	}
 	return ""
+}
+
+func stringToKeyValuePairOptional(env string) instructions.KeyValuePairOptional {
+	i := strings.Index(env, "=")
+
+	if i < 0 {
+		return instructions.KeyValuePairOptional{Key: env}
+	} else {
+		v := env[i+1:]
+		return instructions.KeyValuePairOptional{Key: env[:i], Value: &v}
+	}
+}
+
+func stringsToKeyValuePairOptionals(env []string) []instructions.KeyValuePairOptional {
+	kvpos := []instructions.KeyValuePairOptional{}
+
+	for _, e := range env {
+		kvpos = append(kvpos, stringToKeyValuePairOptional(e))
+	}
+
+	return kvpos
 }
