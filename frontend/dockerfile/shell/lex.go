@@ -45,6 +45,13 @@ func (s *Lex) ProcessWords(word string, env []string) ([]string, error) {
 	return words, err
 }
 
+// ProcessWordWithKvpos will use the 'env' list of environment variables,
+// and replace any env var references in 'word'.
+func (s *Lex) ProcessWordWithKvpos(word string, env []instructions.KeyValuePairOptional) (string, error) {
+	word, _, err := s.process(word, env)
+	return word, err
+}
+
 func (s *Lex) process(word string, env []instructions.KeyValuePairOptional) (string, []string, error) {
 	sw := &shellWord{
 		envs:        env,
