@@ -11,33 +11,28 @@ import (
 	"github.com/pkg/errors"
 )
 
-func detectRunMount(cmd *command, allDispatchStates *dispatchStates) bool {
-	if c, ok := cmd.Command.(*instructions.RunCommand); ok {
-		mounts := instructions.GetMounts(c)
-		sources := make([]*dispatchState, len(mounts))
-		for i, mount := range mounts {
-			if mount.From == "" && mount.Type == instructions.MountTypeCache {
-				mount.From = emptyImageName
-			}
-			from := mount.From
-			if from == "" || mount.Type == instructions.MountTypeTmpfs {
-				continue
-			}
-			stn, ok := allDispatchStates.findStateByName(from)
-			if !ok {
-				stn = &dispatchState{
-					stage:        instructions.Stage{BaseName: from},
-					deps:         make(map[*dispatchState]struct{}),
-					unregistered: true,
-				}
-			}
-			sources[i] = stn
+func detectRunMount(cmd *instructions.RunCommand, allDispatchStates *dispatchStates) {
+	mounts := instructions.GetMounts(cmd)
+	sources := make([]*dispatchState, len(mounts))
+	for i, mount := range mounts {
+		if mount.From == "" && mount.Type == instructions.MountTypeCache {
+			mount.From = emptyImageName
 		}
-		cmd.sources = sources
-		return true
+		from := mount.From
+		if from == "" || mount.Type == instructions.MountTypeTmpfs {
+			continue
+		}
+		stn, ok := allDispatchStates.findStateByName(from)
+		if !ok {
+			stn = &dispatchState{
+				stage:        instructions.Stage{BaseName: from},
+				deps:         make(map[*dispatchState]struct{}),
+				unregistered: true,
+			}
+		}
+		sources[i] = stn
 	}
-
-	return false
+	cmd.sources = sources
 }
 
 func dispatchRunMounts(d *dispatchState, c *instructions.RunCommand, sources []*dispatchState, opt dispatchOpt) ([]llb.RunOption, error) {

@@ -358,7 +358,7 @@ func toCommand(ic instructions.Command, allDispatchStates *dispatchStates) (comm
 			cmd.sources = []*dispatchState{stn}
 		}
 	case *instructions.RunCommand:
-		detectRunMount(&cmd, allDispatchStates)
+		detectRunMount(c, allDispatchStates)
 	default:
 	}
 

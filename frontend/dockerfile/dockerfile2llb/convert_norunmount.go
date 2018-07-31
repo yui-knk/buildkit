@@ -7,8 +7,7 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 )
 
-func detectRunMount(cmd *command, allDispatchStates *dispatchStates) bool {
-	return false
+func detectRunMount(cmd *instructions.RunCommand, allDispatchStates *dispatchStates) {
 }
 
 func dispatchRunMounts(d *dispatchState, c *instructions.RunCommand, sources []*dispatchState, opt dispatchOpt) ([]llb.RunOption, error) {
