@@ -333,9 +333,12 @@ func metaArgsToMap(metaArgs []instructions.KeyValuePairOptional) map[string]stri
 
 func toCommand(ic instructions.Command, allDispatchStates *dispatchStates) (command, error) {
 	cmd := command{Command: ic}
-	if c, ok := ic.(*instructions.CopyCommand); ok {
+
+	switch c := ic.(type) {
+	case *instructions.CopyCommand:
 		if c.From != "" {
 			var stn *dispatchState
+			var ok bool
 			index, err := strconv.Atoi(c.From)
 			if err != nil {
 				stn, ok = allDispatchStates.findStateByName(c.From)
@@ -354,10 +357,9 @@ func toCommand(ic instructions.Command, allDispatchStates *dispatchStates) (comm
 			}
 			cmd.sources = []*dispatchState{stn}
 		}
-	}
-
-	if ok := detectRunMount(&cmd, allDispatchStates); ok {
-		return cmd, nil
+	case *instructions.RunCommand:
+		detectRunMount(&cmd, allDispatchStates)
+	default:
 	}
 
 	return cmd, nil
